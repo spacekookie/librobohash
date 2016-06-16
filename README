@@ -1,0 +1,44 @@
+librobohash
+===========
+
+This is a library to generate pictures of robots from a random string. This library was inspired by https://github.com/e1ven/Robohash and was rewritten in C for https://github.com/WachterJud/qaul.net to be smaller, more portable (no python dependency) and to easily hook into the crypto code from that project.
+
+This side-project was started by me as part of my Google Summer of Code 2016 which you can follow here: https://spacekookie.de/gsoc2016/
+
+
+Building
+========
+
+librobohash uses cmake for easy configuration. Some parameters can be provided to make it smaller. A dependency is `libmbdtls` by ARM and `libpng` for output processing. Make sure to either have a copy of it in your library path for dynamic linking or provide the path to cmake for static linking.
+
+When that is done you can easily build the project with an out-of-source build.
+
+  mkdir build ; cd build/
+  cmake ..
+  make -j 2
+
+If you have issues building the library, please post an issue on this tracker.
+
+
+Usage
+=====
+
+Using this library is easy. In the background it uses mbedtls for hashing so some parameters can be provided to configure the crypto libraries behaviour. If none are provided it will assume defaults as outlined in the configuration. When providing invalid parameters errors will be returned that need to be checked for!
+
+To start, create a librobohash context where you want it.
+
+  int ret;
+  robohash_ctx ctx;
+  ret = robohash_init(&ctx, SHA512);
+  if(ret)
+  {
+    // Log error here
+  }
+
+As errors are returned as integers the exact error string can be extracted via robothash_err_v(int code).
+
+
+License
+=======
+
+This library is licensed under the GNU Public License 2.0. Do what you want with it, use it commercially. But if you improve on it, please provide your code changes as a merge commit.

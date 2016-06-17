@@ -16,6 +16,7 @@
 
 /** This is used to make it nicer to interact with finished picture */
 #include <unitypes.h>
+#include <unistring/stdbool.h>
 #include "mbedtls/sha512.h"
 
 typedef struct {
@@ -39,6 +40,7 @@ typedef struct
     char                    *curr_bfr;
     size_t                  bfr_s, bfr_occ;
     short                   magno;
+    bool                    blind;
 } robohash_ctx;
 
 /**
@@ -52,6 +54,11 @@ typedef struct
  *                        future operations.
  */
 unsigned int robohash_init(robohash_ctx *ctx, unsigned short hash_function, const char *salt);
+
+/**
+ * Tell librobohash to not return a bitmap but an array of resources for the user to assemble
+ */
+unsigned int robohash_blindness(robohash_ctx *ctx, bool blind);
 
 /**
  * Appends a piece of data (possibly string to a buffer that's kept inside
@@ -71,17 +78,17 @@ const char *robohash_read_buffer(robohash_ctx *ctx);
 unsigned int robohash_build(robohash_ctx *ctx, robohash_result *(*buffer));
 
 /**
- *
+ * Not yet implemented!
  */
 unsigned int robohash_verify(robohash_ctx *ctx, void *buffer_a, void *buffer_b);
 
 /**
- *
+ * Returns a string that describes a status code in librobohash
  */
 const char *robohash_err_v(unsigned int errno);
 
 /**
- *
+ * Cleans up allocated memory and devaluates the hash context
  */
 unsigned int robohash_free(robohash_ctx *ctx);
 

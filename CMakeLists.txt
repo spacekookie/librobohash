@@ -20,11 +20,9 @@ project(robohash)
 add_library(robohash
         robohash/robohash.c
         robohash/mbedtls/sha512.c)
+
+target_link_libraries(robohash png)
 set_target_properties(robohash PROPERTIES PREFIX "lib")
-
-#target_link_libraries(robohash ${EM_LIBRARIES})
-#target_include_directories(robohash ${EM_INCLUDES})
-
 target_include_directories(robohash PUBLIC "robohash")
 
 

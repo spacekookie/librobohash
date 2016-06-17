@@ -11,32 +11,33 @@
 
 #include <memory.h>
 #include <malloc.h>
+#include <png.h>
+#include <stdlib.h>
+
+#define RH_WARN_ERR false
 
 #define CHECK_SANE \
     if(ctx->magno != 3) return RH_ERR_CTX_VOID;
 
-unsigned int robohash_init(robohash_ctx *ctx, unsigned short hash_function, const char *salt)
+unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short bg, const char *salt)
 {
     memset(ctx, 0, sizeof(robohash_ctx));
 
-    if(hash_function != RH_MD_SHA512) {
-        return RH_ERR_INVALID_MD;
+    if(!(bg == RH_BG_NONE || bg == RH_BG_ONE || bg == RH_BG_TWO)) {
+        return RH_ERR_INVALID_BG;
     }
 
-    /* When we're sure we can apply it, apply it! */
-    ctx->hash = hash_function;
-
     if(salt) {
+        fputs("DON'T USE SALTS! THEY ARE BROKEN!", stderr);
+        return RH_ERR_GENERIC;
         ctx->salt = (char*) malloc(sizeof(char) * strlen(salt));
         strcpy(ctx->salt, salt);
-
-    } else {
-        ctx->salt = (char*) malloc(sizeof(char) * 1);
-        strcpy(ctx->salt, "\0");
     }
 
     ctx->magno = 3;
     ctx->bfr_s = ctx->bfr_occ = 0;
+    ctx->type = type;
+    ctx->bg = bg;
 
     /** Initialise the mbedtls context */
     ctx->md_ctx = (mbedtls_sha512_context*) malloc(sizeof(mbedtls_sha512_context));
@@ -49,14 +50,27 @@ unsigned int robohash_append_msg(robohash_ctx *ctx, const char *msg)
 {
     CHECK_SANE
 
+    int prev_s = ctx->bfr_s;
+
     /* Check that our buffer is big enough to handle new data */
     if(ctx->bfr_s < strlen(msg)) {
-        ctx->bfr_s += (strlen(msg) * 2);
+        if(prev_s == 0 && ctx->salt) {
+            ctx->bfr_s += ((strlen(msg) + strlen(ctx->salt)) * 2);
+        } else {
+            ctx->bfr_s += (strlen(msg) * 2);
+        }
         char *tmp = (char*) malloc(sizeof(char) *  ctx->bfr_s);
         memset(tmp, 0, ctx->bfr_s);
 
         /* Move data */
         if(ctx->curr_bfr) strcpy(tmp, ctx->curr_bfr);
+
+        /* Append a salt if it's the first block and we have one */
+        if(prev_s == 0 && ctx->salt) {
+            ctx->bfr_occ += strlen(ctx->salt + 2);
+            strcpy(tmp, ctx->salt);
+            strcat(tmp, "::");
+        }
 
         /* Now move the buffer */
         free(ctx->curr_bfr);
@@ -107,6 +121,7 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
     (*buffer)->height = 256;
 
     /* Associate digest sections with picture elements */
+
 
     return RH_ERR_OK;
 }

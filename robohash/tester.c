@@ -7,8 +7,9 @@ int main(void)
 {
     int ret;
     robohash_ctx ctx;
-    ret = robohash_init(&ctx, RH_MD_SHA512, NULL);
+    ret = robohash_init(&ctx, RH_T_FULL, RH_BG_ONE, NULL);
     printf("Init: %s", robohash_err_v(ret));
+    if(ret != 0) exit(ret);
 
     robohash_append_msg(&ctx, "Hello ");
     robohash_append_msg(&ctx, "this ");
@@ -22,9 +23,11 @@ int main(void)
     robohash_result *result;
     ret = robohash_build(&ctx, &result);
     printf("Building: %s", robohash_err_v(ret));
+    if(ret != 0) exit(ret);
 
     ret = robohash_free(&ctx);
     printf("Free: %s", robohash_err_v(ret));
+    if(ret != 0) exit(ret);
 
     return 0;
 }

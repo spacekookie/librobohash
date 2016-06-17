@@ -9,14 +9,15 @@
 #ifndef _ROBOHASH_H_
 #define _ROBOHASH_H_
 
-#define RH_MD_SHA256 0xA
-#define RH_MD_SHA512 0xB
-#define RH_MD_TIGER2 0xC
-#define RH_MD_BLAKE 0xD
+#define RH_MD_SHA512 1111
+#define RH_BG_NONE   2222
+#define RH_BG_ONE    2224
+#define RH_BG_TWO    2228
 
 /** This is used to make it nicer to interact with finished picture */
 #include <unitypes.h>
 #include <unistring/stdbool.h>
+#include <stdio.h>
 #include "mbedtls/sha512.h"
 
 typedef struct {
@@ -32,6 +33,10 @@ typedef struct
     size_t height;
 } robohash_result;
 
+typedef enum {
+    RH_T_FULL, RH_T_MSTR, RH_T_HEAD
+} robohash_type;
+
 typedef struct
 {
     unsigned short          hash;
@@ -40,7 +45,9 @@ typedef struct
     char                    *curr_bfr;
     size_t                  bfr_s, bfr_occ;
     short                   magno;
-    bool                    blind;
+
+    bool                    bg, blind;
+    robohash_type           type;
 } robohash_ctx;
 
 /**
@@ -53,7 +60,7 @@ typedef struct
  *   salt:            Optional, a string to use as salt for all 
  *                        future operations.
  */
-unsigned int robohash_init(robohash_ctx *ctx, unsigned short hash_function, const char *salt);
+unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short bg, const char *salt);
 
 /**
  * Tell librobohash to not return a bitmap but an array of resources for the user to assemble

@@ -16,6 +16,7 @@
 
 // Specific errors and return codes
 #define RH_ERR_INVALID_MD   16
+#define RH_ERR_INVALID_BG   17
 #define RH_ERR_CTX_VOID     18
 #define RH_ERR_MALLOC       20
 #define RH_ERR_RESOURCES    22

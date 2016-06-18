@@ -13,6 +13,7 @@
 #define RH_ERR_OK           0
 #define RH_ERR_WARN         1
 #define RH_ERR_GENERIC      2
+#define RH_ERR_NOT_IMPL     7
 
 // Specific errors and return codes
 #define RH_ERR_INVALID_MD   16

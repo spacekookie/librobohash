@@ -28,9 +28,11 @@ typedef struct {
 
 typedef struct
 {
-    pixel_t *pixels;
-    size_t width;
-    size_t height;
+    char msg_dig[6][14];
+
+//    pixel_t *pixels;
+//    size_t width;
+//    size_t height;
 } robohash_result;
 
 typedef enum {

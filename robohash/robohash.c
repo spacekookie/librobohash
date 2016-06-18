@@ -8,6 +8,8 @@
 
 #include "robohash.h"
 #include "errors.h"
+#include "base64.h"
+
 
 #include <memory.h>
 #include <malloc.h>
@@ -107,8 +109,14 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
     char output[64];
     mbedtls_sha512_finish(ctx->md_ctx, output);
 
+    char encoded[Base64encode_len(64)];
+    Base64encode(encoded, output, 64);
+
+    // printf("Encoded: %s\n", encoded, strlen(encoded));
+
     /* Then clear our context for the next transaction */
     free(ctx->curr_bfr);
+    ctx->curr_bfr = NULL;
     ctx->bfr_occ = ctx->bfr_s = 0;
 
     /* Allocate the result struct */
@@ -117,13 +125,54 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
         return RH_ERR_MALLOC;
     }
 
-    (*buffer)->width = 256;
-    (*buffer)->height = 256;
+//    (*buffer)->width = 256;
+//    (*buffer)->height = 256;
 
-    /* Associate digest sections with picture elements */
+    /* Figure out how many hash snippets we need */
+    int parts;
+    switch (ctx->type) {
+        case RH_T_FULL: parts = 5; break;
+        case RH_T_MSTR: parts = 6; break;
+    }
+    if(ctx->bg != RH_BG_NONE) parts += 1;
 
+    /* Cut hash apart */
+    int it = 0;                         // Iterator for the loop
+    int blk_s = sizeof(encoded) / parts; // Size of a block
+    int curr_start = 0;       // Start and end points for cut
+    char snippets[parts][blk_s];        // Map of snippets
 
+    /* Prepare array and cut snippets */
+    memset(snippets, 0, sizeof(char) * parts * blk_s);
+    for(it = 0; it < parts; it++) {
+        memcpy(&snippets[it], &encoded[curr_start], blk_s * sizeof(char));
+        curr_start += blk_s;
+    }
+
+    memcpy((*buffer)->msg_dig, snippets, sizeof(char) * blk_s * parts);
     return RH_ERR_OK;
+
+//    /* Choosing components from sub-hashes */
+//    int colours = 10;
+//    int bg;
+//    if(ctx->bg == RH_BG_ONE) bg = 12;
+//    else if(ctx->bg = RH_BG_TWO) bg = 6;
+//
+//    if(ctx->type == RH_T_FULL) {
+//        int mouths, eyes, accessory, body, face = 9;
+//
+//
+//        int mouth = ((int) snippets[1]) % mouths;
+//
+//    } else {
+//        return RH_ERR_NOT_IMPL;
+//    }
+
+//    if(ctx->blind) {
+//        return RH_ERR_OK;
+//    }
+//
+//    return RH_ERR_OK;
 }
 
 const char *robohash_read_buffer(robohash_ctx *ctx)
@@ -148,6 +197,8 @@ const char *robohash_err_v(unsigned int errno)
             return "Allocating memory on the heap failed!\n";
         case RH_ERR_RESOURCES:
             return "Required image resources not found!\n";
+        case RH_ERR_NOT_IMPL:
+            return "Feature missing in current implementation!\n";
         default:
             return "An unknown error occured!\n";
     }
@@ -166,3 +217,14 @@ unsigned int robohash_free(robohash_ctx *ctx)
     memset(ctx, 0, sizeof(robohash_ctx));
     return RH_ERR_OK;
 }
+
+// Debug stuff
+//    it = 0;
+//    for(it; it < parts; it++) {
+//        int a = 0;
+//        printf(">> ");
+//        for(a; a < blk_s; a++) {
+//            printf("%c", snippets[it][a]);
+//        }
+//        printf("\n");
+//    }

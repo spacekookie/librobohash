@@ -19,6 +19,8 @@ project(robohash)
 # Define our library in cmake
 add_library(robohash
         robohash/robohash.c
+        robohash/base64.c
+
         robohash/mbedtls/sha512.c)
 
 target_link_libraries(robohash png)

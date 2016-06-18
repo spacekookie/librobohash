@@ -15,26 +15,40 @@
 #include <malloc.h>
 #include <png.h>
 #include <stdlib.h>
+#include <dirent.h>
 
 #define RH_WARN_ERR false
+
+// TODO: Change this! The path should come from the build script, not be hardcoded
+#define RES_S1 "resources/set1/"
+//#define RES_S2 "resources/set2/"
+//#define RES_S3 "resources/set3/"
+#define RES_BG1 "resources/backgrounds/bg1"
+#define RES_BG2 "resources/backgrounds/bg2"
 
 #define CHECK_SANE \
     if(ctx->magno != 3) return RH_ERR_CTX_VOID;
 
 unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short bg, const char *salt)
 {
-    memset(ctx, 0, sizeof(robohash_ctx));
+    if(salt) {
+        fputs("DON'T USE SALTS! THEY ARE BROKEN!", stderr);
+        return RH_ERR_GENERIC;
+        // ctx->salt = (char*) malloc(sizeof(char) * strlen(salt));
+        // strcpy(ctx->salt, salt);
+    }
+
+    if(type != RH_T_FULL) {
+        fputs("ONLY FULL BODY ROBOTS ARE IMPLEMENTED YET!", stderr);
+        return RH_ERR_GENERIC;
+    }
 
     if(!(bg == RH_BG_NONE || bg == RH_BG_ONE || bg == RH_BG_TWO)) {
         return RH_ERR_INVALID_BG;
     }
 
-    if(salt) {
-        fputs("DON'T USE SALTS! THEY ARE BROKEN!", stderr);
-        return RH_ERR_GENERIC;
-        ctx->salt = (char*) malloc(sizeof(char) * strlen(salt));
-        strcpy(ctx->salt, salt);
-    }
+    /* Wipe the struct so we are sure it's really empty */
+    memset(ctx, 0, sizeof(robohash_ctx));
 
     ctx->magno = 3;
     ctx->bfr_s = ctx->bfr_occ = 0;
@@ -43,8 +57,11 @@ unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short
 
     /** Initialise the mbedtls context */
     ctx->md_ctx = (mbedtls_sha512_context*) malloc(sizeof(mbedtls_sha512_context));
-    mbedtls_sha512_init(ctx->md_ctx);
+    if(ctx->md_ctx == NULL) {
+        return RH_ERR_MALLOC;
+    }
 
+    mbedtls_sha512_init(ctx->md_ctx);
     return RH_ERR_OK;
 }
 
@@ -61,20 +78,21 @@ unsigned int robohash_append_msg(robohash_ctx *ctx, const char *msg)
         } else {
             ctx->bfr_s += (strlen(msg) * 2);
         }
-        char *tmp = (char*) malloc(sizeof(char) *  ctx->bfr_s);
-        memset(tmp, 0, ctx->bfr_s);
 
-        /* Move data */
-        if(ctx->curr_bfr) strcpy(tmp, ctx->curr_bfr);
+        /* Make a new clean buffer */
+        char *tmp = (char*) calloc(sizeof(char), ctx->bfr_s);
 
-        /* Append a salt if it's the first block and we have one */
+        /* Prepend the salt if it's the first block and we have one */
         if(prev_s == 0 && ctx->salt) {
             ctx->bfr_occ += strlen(ctx->salt + 2);
             strcpy(tmp, ctx->salt);
             strcat(tmp, "::");
         }
 
-        /* Now move the buffer */
+        /* Move data from old to new */
+        if(ctx->curr_bfr) strcpy(tmp, ctx->curr_bfr);
+
+        /* Move buffer ptr and clear old */
         free(ctx->curr_bfr);
         ctx->curr_bfr = tmp;
     }
@@ -91,6 +109,64 @@ unsigned int robohash_blindness(robohash_ctx *ctx, bool blind)
     return RH_ERR_OK;
 }
 
+/** Numeric hash function that yields good distribution of values */
+unsigned int hash(unsigned char *str, int mod)
+{
+    int c;
+    unsigned int hash = 5381;
+    while (c = *str++) hash = ((hash << 5) + hash) + c;
+
+    hash = hash % mod;
+    return hash;
+}
+
+void transfer(unsigned char *bfr, int bfr_len, unsigned char *src) {
+    for(int i = 0; i < bfr_len; i++) {
+        bfr[i] = src[i];
+    }
+}
+
+char *select_file_from(char *part, char *colour, int part_select)
+{
+    DIR *dir;
+    struct dirent *ent;
+
+    char path[512];
+    memset(path, 0, sizeof(path));
+
+    strcpy(path, "/home/spacekookie/Projects/Code/personal/librobohash/robohash/");
+    strcat(path, RES_S1);
+
+    strcat(path, colour);
+    strcat(path, "/");
+
+    strcat(path, part);
+    strcat(path, "/");
+
+    int filec = 0;
+    char selected[64];
+    memset(selected, 0, sizeof(selected));
+
+    if ((dir = opendir(path)) != NULL) {
+        while((ent = readdir (dir)) != NULL) {
+            filec++;
+            if(filec == part_select) {
+                strcpy(selected, ent->d_name);
+                break;
+            }
+        }
+        closedir(dir);
+    } else {
+        printf("FAILED TO OPEN DIRECTORY (or something)...\n");
+    }
+
+    int path_length = strlen(path) + strlen(selected) + 1;
+    char *sel_path = (char*) calloc(sizeof(char), path_length);
+    strcpy(sel_path, path);
+    strcat(sel_path, selected);
+    return sel_path;
+}
+
 unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
 {
     CHECK_SANE
@@ -99,7 +175,7 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
     mbedtls_sha512_starts(ctx->md_ctx, 0);
 
     /* Cut down buffer size to required only */
-    const char *tmpsrc = malloc(sizeof(char) * ctx->bfr_occ);
+    const char *tmpsrc = calloc(sizeof(char), ctx->bfr_occ);
     memcpy(tmpsrc, ctx->curr_bfr, ctx->bfr_occ);
 
     /* Then process the buffer in one go */
@@ -108,6 +184,9 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
     /* Save hash output in stack array */
     char output[64];
     mbedtls_sha512_finish(ctx->md_ctx, output);
+
+    /* Free temp buffer */
+    free(tmpsrc);
 
     char encoded[Base64encode_len(64)];
     Base64encode(encoded, output, 64);
@@ -125,14 +204,11 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
         return RH_ERR_MALLOC;
     }
 
-//    (*buffer)->width = 256;
-//    (*buffer)->height = 256;
-
     /* Figure out how many hash snippets we need */
     int parts;
     switch (ctx->type) {
-        case RH_T_FULL: parts = 5; break;
-        case RH_T_MSTR: parts = 6; break;
+        case RH_T_FULL: parts = 6; break;
+        case RH_T_MSTR: parts = 7; break;
     }
     if(ctx->bg != RH_BG_NONE) parts += 1;
 
@@ -149,30 +225,90 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
         curr_start += blk_s;
     }
 
-    memcpy((*buffer)->msg_dig, snippets, sizeof(char) * blk_s * parts);
+    /* Choosing components from sub-hashes */
+    int bg;
+    int colours = 10;
+    if(ctx->bg == RH_BG_ONE) bg = 12;
+    else if(ctx->bg = RH_BG_TWO) bg = 6;
+
+    /* Buffers for resources */
+    char *mouth_res;
+    char *eyes_res;
+    char *acc_res;
+    char *body_res;
+    char *face_res;
+    char *bg_res;
+
+    if(ctx->type == RH_T_FULL) {
+        int mouths = 10, eyes = 10, accessories = 10, bodies = 10, faces = 10;
+        unsigned char data[blk_s];
+
+        /* MOUTH OF THE ROBOT */
+        memset(data, 0, sizeof(unsigned char) * blk_s);
+        transfer(data, blk_s, snippets[0]);
+        int mouth = hash(data, mouths);
+
+        /* EYES OF THE ROBOT */
+        memset(data, 0, sizeof(unsigned char) * blk_s);
+        transfer(data, blk_s, snippets[1]);
+        int eye = hash(data, eyes);
+
+        /* FACE OF THE ROBOT */
+        memset(data, 0, sizeof(unsigned char) * blk_s);
+        transfer(data, blk_s, snippets[2]);
+        int face = hash(data, faces);
+
+        /* ACCESSORY OF THE ROBOT */
+        memset(data, 0, sizeof(unsigned char) * blk_s);
+        transfer(data, blk_s, snippets[3]);
+        int accessory = hash(data, accessories);
+
+        /* BODY OF THE ROBOT */
+        memset(data, 0, sizeof(unsigned char) * blk_s);
+        transfer(data, blk_s, snippets[4]);
+        int body = hash(data, bodies);
+
+        /* DEFINE BACKGROUND IF REQUIRED */
+        int background;
+        if(ctx->bg != RH_BG_NONE) {
+            memset(data, 0, sizeof(unsigned char) * blk_s);
+            transfer(data, blk_s, snippets[5]);
+            background = hash(data, bg);
+        }
+
+        memset(data, 0, sizeof(unsigned char) * blk_s);
+        transfer(data, blk_s, snippets[6]);
+        int colour = hash(data, colours);
+
+        char *colour_sel[] = {"blue", "brown", "green", "grey", "orange", "pink",
+                                     "purple", "red", "white", "yellow"};
+
+        /* Select parts from collection */
+        mouth_res = select_file_from("000#Mouth", colour_sel[colour], mouth);
+        eyes_res = select_file_from("001#Eyes", colour_sel[colour], eye);
+        acc_res = select_file_from("002#Accessory", colour_sel[colour], accessory);
+        body_res = select_file_from("003#01Body", colour_sel[colour], body);
+        face_res = select_file_from("004#02Face", colour_sel[colour], face);
+        // bg_res = select_file_from()
+
+    } else {
+        return RH_ERR_NOT_IMPL;
+    }
+
+    if(ctx->blind) {
+      (*buffer)->blind = true;
+      (*buffer)->mouth_res = mouth_res;
+      (*buffer)->eyes_res = eyes_res;
+      (*buffer)->acc_res = acc_res;
+      (*buffer)->body_res = body_res;
+      (*buffer)->face_res = face_res;
+
+    } else {
+      (*buffer)->width = 128;
+      (*buffer)->height = 128;
+    }
+
     return RH_ERR_OK;
-
-//    /* Choosing components from sub-hashes */
-//    int colours = 10;
-//    int bg;
-//    if(ctx->bg == RH_BG_ONE) bg = 12;
-//    else if(ctx->bg = RH_BG_TWO) bg = 6;
-//
-//    if(ctx->type == RH_T_FULL) {
-//        int mouths, eyes, accessory, body, face = 9;
-//
-//
-//        int mouth = ((int) snippets[1]) % mouths;
-//
-//    } else {
-//        return RH_ERR_NOT_IMPL;
-//    }
-
-//    if(ctx->blind) {
-//        return RH_ERR_OK;
-//    }
-//
-//    return RH_ERR_OK;
 }
 
 const char *robohash_read_buffer(robohash_ctx *ctx)

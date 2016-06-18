@@ -28,11 +28,20 @@ typedef struct {
 
 typedef struct
 {
-    char msg_dig[6][14];
+    /* Combined image data */
+    pixel_t *pixels;
+    size_t  width;
+    size_t  height;
 
-//    pixel_t *pixels;
-//    size_t width;
-//    size_t height;
+    /* Parts data from blind operation */
+    char    *mouth_res;
+    char    *eyes_res;
+    char    *acc_res;
+    char    *body_res;
+    char    *face_res;
+    char    *bg_res;
+
+    bool    blind;
 } robohash_result;
 
 typedef enum {
@@ -48,7 +57,8 @@ typedef struct
     size_t                  bfr_s, bfr_occ;
     short                   magno;
 
-    bool                    bg, blind;
+    unsigned short          bg;
+    bool                    blind;
     robohash_type           type;
 } robohash_ctx;
 

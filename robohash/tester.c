@@ -34,8 +34,11 @@ void do_hashing(const char *word)
     printf("Init: %s", robohash_err_v(ret));
     if (ret != 0) exit(ret);
 
+#define PATH "/home/spacekookie/Projects/code/librobohash/robohash/"
+    robohash_set_path(&ctx, PATH);
+
     /* Override blind mode */
-    ctx.blind = true;
+    robohash_blindness(&ctx, true);
 
     robohash_append_msg(&ctx, word);
     char buffer[256];

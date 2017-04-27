@@ -41,6 +41,7 @@ typedef struct
     char    *face_res;
     char    *bg_res;
 
+    /* Do we generate bitmaps? */
     bool    blind;
 } robohash_result;
 
@@ -57,6 +58,7 @@ typedef struct
     size_t                  bfr_s, bfr_occ;
     short                   magno;
 
+    char                    *path;
     unsigned short          bg;
     bool                    blind;
     robohash_type           type;
@@ -74,8 +76,19 @@ typedef struct
  */
 unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short bg, const char *salt);
 
+
 /**
- * Tell librobohash to not return a bitmap but an array of resources for the user to assemble
+ *
+ * @param ctx
+ * @param path
+ * @return
+ */
+unsigned int robohash_set_path(robohash_ctx *ctx, const char *path);
+
+
+/**
+ * Tell librobohash to not return a bitmap but an array of resources
+ * for the user to assemble themselves
  */
 unsigned int robohash_blindness(robohash_ctx *ctx, bool blind);
 

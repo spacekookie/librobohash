@@ -43,7 +43,7 @@ extern "C" {
 /**
  * \brief          SHA-512 context structure
  */
-typedef struct
+typedef struct mbedtls_sha512_context
 {
     uint64_t total[2];          /*!< number of bytes processed  */
     uint64_t state[8];          /*!< intermediate digest state  */

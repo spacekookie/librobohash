@@ -8,27 +8,28 @@
 
 
 cmake_minimum_required(VERSION 2.8.11)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c99")
+set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -std=c99")
 set(CMAKE_BUILD_TYPE Debug)
 
 project(robohash)
 
-#find_package (PkgConfig)
-#pkg_check_modules (EM REQUIRED mbedtls)
+set(ROBO_SRC 
+    # Embedded crypto-library
+    lib/mbedtls/sha512.c
+    # lib/mbedtls/sha256.c
 
-# Define our library in cmake
-add_library(robohash
-        robohash/robohash.c
-        robohash/base64.c
+    # Core robohash files
+    lib/base64.c
+        lib/rh.c
+    lib/imgur.c)
 
-        robohash/mbedtls/sha512.c)
-
-target_link_libraries(robohash png)
-set_target_properties(robohash PROPERTIES PREFIX "lib")
-target_include_directories(robohash PUBLIC "robohash")
-
+# Define the librobohash library
+add_library(librobohash ${ROBO_SRC})
+target_include_directories(librobohash PUBLIC "include")
+target_include_directories(librobohash PRIVATE "lib")
+target_link_libraries(librobohash png)
 
 # Then make a testing binary for us to use
-add_executable(robohash-test robohash/tester.c)
-target_link_libraries(robohash-test robohash)
+add_executable(robotest tester.c)
+target_link_libraries(robotest librobohash)
 

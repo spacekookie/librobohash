@@ -6,17 +6,19 @@
 //
 ///////////
 
-#include "robohash.h"
-#include "errors.h"
+#include <robohash/rh.h>
+
+#include "mbedtls/sha512.h"
+
+#include "robohash/errors.h"
 #include "base64.h"
 
 
 #include <memory.h>
 #include <malloc.h>
-#include <png.h>
 #include <stdlib.h>
 #include <dirent.h>
-
+#include <png.h>
 #define RH_WARN_ERR false
 
 // TODO: Change this! The path should come from the build script, not be hardcoded
@@ -26,10 +28,7 @@
 #define RES_BG1 "resources/backgrounds/bg1"
 #define RES_BG2 "resources/backgrounds/bg2"
 
-#define RESOURCE_PATH ""
-
-#define CHECK_SANE \
-    if(ctx->magno != 3) return RH_ERR_CTX_VOID;
+#define CHECK_SANE if(ctx->magno != 3) return RH_ERR_CTX_VOID;
 
 unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short bg, const char *salt)
 {
@@ -318,16 +317,15 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
     }
 
     if(ctx->blind) {
-      (*buffer)->blind = true;
-      (*buffer)->mouth_res = mouth_res;
-      (*buffer)->eyes_res = eyes_res;
-      (*buffer)->acc_res = acc_res;
-      (*buffer)->body_res = body_res;
-      (*buffer)->face_res = face_res;
+        (*buffer)->blind = true;
+        (*buffer)->mouth_res = mouth_res;
+        (*buffer)->eyes_res = eyes_res;
+        (*buffer)->acc_res = acc_res;
+        (*buffer)->body_res = body_res;
+        (*buffer)->face_res = face_res;
 
     } else {
-      (*buffer)->width = 128;
-      (*buffer)->height = 128;
+        // TODO: Generate png here
     }
 
     return RH_ERR_OK;
@@ -374,6 +372,25 @@ unsigned int robohash_free(robohash_ctx *ctx)
     /* Forcibly write over it */
     memset(ctx, 0, sizeof(robohash_ctx));
     return RH_ERR_OK;
+}
+
+
+inline void setRGB(png_byte *ptr, float val)
+{
+    int v = (int)(val * 767);
+    if (v < 0) v = 0;
+    if (v > 767) v = 767;
+    int offset = v % 256;
+
+    if (v<256) {
+        ptr[0] = 0; ptr[1] = 0; ptr[2] = offset;
+    }
+    else if (v<512) {
+        ptr[0] = 0; ptr[1] = offset; ptr[2] = 255-offset;
+    }
+    else {
+        ptr[0] = offset; ptr[1] = 255-offset; ptr[2] = 0;
+    }
 }
 
 // Debug stuff

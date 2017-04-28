@@ -1,8 +1,9 @@
 #include <stdlib.h>
-#include <robohash.h>
 #include <stdio.h>
 #include <memory.h>
-#include "robohash.h"
+
+#include <robohash/rh.h>
+#include <robohash/imgur.h>
 
 const char words[][6] = {"argon", "emina", "fogey", "balch", "molto", "china", "pross", "bream", "laban", "baker",
                          "fifty", "hakea", "gawra", "doria", "bloke", "lenes", "buret", "luffa", "kirov", "liker",
@@ -34,11 +35,11 @@ void do_hashing(const char *word)
     printf("Init: %s", robohash_err_v(ret));
     if (ret != 0) exit(ret);
 
-#define PATH "/home/spacekookie/Projects/code/librobohash/robohash/"
+#define PATH "/home/spacekookie/Projects/code/librobohash/"
     robohash_set_path(&ctx, PATH);
 
     /* Override blind mode */
-    robohash_blindness(&ctx, true);
+    robohash_blindness(&ctx, false);
 
     robohash_append_msg(&ctx, word);
     char buffer[256];

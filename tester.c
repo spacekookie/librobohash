@@ -26,37 +26,49 @@ const char words[][6] = {"argon", "emina", "fogey", "balch", "molto", "china", "
                          "colum", "trews", "going", "fusee", "visor", "haulm", "peter", "hoots", "jesus", "ruler",
                          "twite", "admin", "fluid", "agura", "skete", "speel", "basin", "thokk", "footy", "unfar"};
 
+#define PATH "/home/spacekookie/Projects/code/librobohash/"
+
 void do_hashing(const char *word)
 {
-    printf("=== RESULT '%s' ===\n", word);
+    /* Store state */
     int ret;
     robohash_ctx ctx;
+    printf("=== RESULT '%s' ===\n", word);
+
+    /** Initialise librobohash */
     ret = robohash_init(&ctx, RH_T_FULL, RH_BG_ONE, NULL);
     printf("Init: %s", robohash_err_v(ret));
     if (ret != 0) exit(ret);
 
-#define PATH "/home/spacekookie/Projects/code/librobohash/"
+    /* Set the resource path properly */
     robohash_set_path(&ctx, PATH);
 
     /* Override blind mode */
     robohash_blindness(&ctx, false);
 
+    /** Append a message */
     robohash_append_msg(&ctx, word);
-    char buffer[256];
-    strcpy(buffer, robohash_read_buffer(&ctx));
 
-    /* Now actually build the result */
+    /** Then read back the buffer to us (let's say we're paranoid) */
+    char buffer[256];
+    memset(buffer, 0, 256);
+    strcpy(buffer, robohash_read_buffer(&ctx));
+    printf("Now in buffer: '%s'\n", buffer);
+
+    /** Now actually build the result */
     robohash_result *result;
     ret = robohash_build(&ctx, &result);
     printf("Building: %s", robohash_err_v(ret));
     if (ret != 0) exit(ret);
 
+    /** Print all of the assembled pieces */
     printf("Mouth: %s\n", result->mouth_res);
     printf("Eyes: %s\n", result->eyes_res);
     printf("Acc: %s\n", result->acc_res);
     printf("Body: %s\n", result->body_res);
     printf("Face: %s\n", result->face_res);
 
+    /** Free those strings TODO: Write function for that */
     free(result->mouth_res);
     free(result->eyes_res);
     free(result->acc_res);
@@ -64,6 +76,7 @@ void do_hashing(const char *word)
     free(result->face_res);
     free(result);
 
+    /** Free the rest of the context */
     ret = robohash_free(&ctx);
     printf("Free: %s", robohash_err_v(ret));
     if (ret != 0) exit(ret);

@@ -27,23 +27,25 @@
 #define RES_S3 "resources/set3/"
 #define RES_BG1 "resources/backgrounds/bg1"
 #define RES_BG2 "resources/backgrounds/bg2"
+#define MAGIC_YO 3
+#define CHECK_SANE if(ctx->magno != MAGIC_YO) return RH_ERR_CTX_VOID;
 
-#define CHECK_SANE if(ctx->magno != 3) return RH_ERR_CTX_VOID;
+
+/** FUNCTION FORWARD DECLARATIONS **/
+inline void transfer(unsigned char *bfr, int bfr_len, unsigned char *src);
+inline unsigned int hash(unsigned char *str, int mod);
+
 
 unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short bg, const char *salt)
 {
-    if(salt) {
-        fputs("DON'T USE SALTS! THEY ARE BROKEN!", stderr);
-        return RH_ERR_GENERIC;
-        // ctx->salt = (char*) malloc(sizeof(char) * strlen(salt));
-        // strcpy(ctx->salt, salt);
-    }
 
+    /** We have some functional limitations */
     if(type != RH_T_FULL) {
         fputs("ONLY FULL BODY ROBOTS ARE IMPLEMENTED YET!", stderr);
         return RH_ERR_GENERIC;
     }
 
+    /** Make sure a valid background field is selected */
     if(!(bg == RH_BG_NONE || bg == RH_BG_ONE || bg == RH_BG_TWO)) {
         return RH_ERR_INVALID_BG;
     }
@@ -51,7 +53,7 @@ unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short
     /* Wipe the struct so we are sure it's really empty */
     memset(ctx, 0, sizeof(robohash_ctx));
 
-    ctx->magno = 3;
+    ctx->magno = MAGIC_YO;
     ctx->bfr_s = ctx->bfr_occ = 0;
     ctx->type = type;
     ctx->bg = bg;
@@ -116,6 +118,8 @@ unsigned int robohash_append_msg(robohash_ctx *ctx, const char *msg)
     /** Append our message and increase the occupancy counter */
     ctx->bfr_occ += strlen(msg);
     strcat(ctx->curr_bfr, msg);
+
+    return RH_ERR_OK;
 }
 
 unsigned int robohash_blindness(robohash_ctx *ctx, bool blind)
@@ -125,22 +129,6 @@ unsigned int robohash_blindness(robohash_ctx *ctx, bool blind)
     return RH_ERR_OK;
 }
 
-/** Numeric hash function that yields decent distribution of values */
-unsigned int hash(unsigned char *str, int mod)
-{
-    int c;
-    unsigned int hash = 5381;
-    while (c = *str++) hash = ((hash << 5) + hash) + c;
-
-    hash = hash % mod;
-    return hash;
-}
-
-void transfer(unsigned char *bfr, int bfr_len, unsigned char *src) {
-    for(int i = 0; i < bfr_len; i++) {
-        bfr[i] = src[i];
-    }
-}
 
 char *select_file_from(robohash_ctx *ctx, char *part, char *colour, int part_select)
 {
@@ -301,8 +289,8 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
         transfer(data, blk_s, snippets[6]);
         int colour = hash(data, colours);
 
-        char *colour_sel[] = {"blue", "brown", "green", "grey", "orange", "pink",
-                                     "purple", "red", "white", "yellow"};
+        char *colour_sel[] = { "blue", "brown", "green", "grey", "orange",
+                               "pink", "purple", "red", "white", "yellow" };
 
         /* Select parts from collection */
         mouth_res = select_file_from(ctx, "000#Mouth", colour_sel[colour], mouth);
@@ -310,7 +298,7 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
         acc_res = select_file_from(ctx, "002#Accessory", colour_sel[colour], accessory);
         body_res = select_file_from(ctx, "003#01Body", colour_sel[colour], body);
         face_res = select_file_from(ctx, "004#02Face", colour_sel[colour], face);
-        // bg_res = select_file_from()
+        bg_res = select_file_from(ctx, )
 
     } else {
         return RH_ERR_NOT_IMPL;
@@ -331,34 +319,32 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
     return RH_ERR_OK;
 }
 
+
 const char *robohash_read_buffer(robohash_ctx *ctx)
 {
-    CHECK_SANE
-
-    /* Check for magic number */
-    if(ctx->magno != 3) return RH_ERR_CTX_VOID;
+    /* Manually check for "magic" number */
+    if(ctx->magno != MAGIC_YO) return "(INVALID)";
     return ctx->curr_bfr;
 }
 
+
 const char *robohash_err_v(unsigned int errno)
 {
+// Makes writing the error string a bit nicer
+#define END "\n"
+
+    /** Just switch through all the errors that we know of and return a message */
     switch(errno) {
-        case RH_ERR_OK:
-            return "Operation completed successfully!\n";
-        case RH_ERR_INVALID_MD:
-            return "Invalid message digest function selected!\n";
-        case RH_ERR_CTX_VOID:
-            return "Non initialised robohash context provided!\n";
-        case RH_ERR_MALLOC:
-            return "Allocating memory on the heap failed!\n";
-        case RH_ERR_RESOURCES:
-            return "Required image resources not found!\n";
-        case RH_ERR_NOT_IMPL:
-            return "Feature missing in current implementation!\n";
-        default:
-            return "An unknown error occured!\n";
+        case RH_ERR_OK:         return "Operation completed successfully!" END;
+        case RH_ERR_INVALID_MD: return "Invalid message digest function selected!" END;
+        case RH_ERR_CTX_VOID:   return "Non initialised robohash context provided!" END;
+        case RH_ERR_MALLOC:     return "Allocating memory on the heap failed!" END;
+        case RH_ERR_RESOURCES:  return "Required image resources not found!" END;
+        case RH_ERR_NOT_IMPL:   return "Feature missing in current implementation!" END;
+        default:                return "An unknown error occured!" END;
     }
 }
+
 
 unsigned int robohash_free(robohash_ctx *ctx)
 {
@@ -375,31 +361,39 @@ unsigned int robohash_free(robohash_ctx *ctx)
 }
 
 
-inline void setRGB(png_byte *ptr, float val)
-{
-    int v = (int)(val * 767);
-    if (v < 0) v = 0;
-    if (v > 767) v = 767;
-    int offset = v % 256;
+/**
+ *
+ * PRIVATE UTILITY FUNCTIONS BELOW
+ *
+ */
 
-    if (v<256) {
-        ptr[0] = 0; ptr[1] = 0; ptr[2] = offset;
-    }
-    else if (v<512) {
-        ptr[0] = 0; ptr[1] = offset; ptr[2] = 255-offset;
-    }
-    else {
-        ptr[0] = offset; ptr[1] = 255-offset; ptr[2] = 0;
-    }
+
+/**
+ * A numeric hash function that yields a kinda okay distributions
+ * of values used to associate crypto-hashes with robo parts
+ *
+ * @param str
+ * @param mod
+ * @return
+ */
+inline unsigned int hash(unsigned char *str, int mod)
+{
+    int c;
+    unsigned int hash = 5381; // My second favourite prime number
+    while (c = *str++) hash = ((hash << 5) + hash) + c;
+    return hash % mod;
 }
 
-// Debug stuff
-//    it = 0;
-//    for(it; it < parts; it++) {
-//        int a = 0;
-//        printf(">> ");
-//        for(a; a < blk_s; a++) {
-//            printf("%c", snippets[it][a]);
-//        }
-//        printf("\n");
-//    }
+
+/**
+ * Why does this exist? Shouldn't that just be strcpy?
+ *
+ * @param bfr
+ * @param bfr_len
+ * @param src
+ */
+inline void transfer(unsigned char *bfr, int bfr_len, unsigned char *src) {
+    for(int i = 0; i < bfr_len; i++) {
+        bfr[i] = src[i];
+    }
+}

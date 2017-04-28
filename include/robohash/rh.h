@@ -22,6 +22,10 @@
 #include <stdio.h>
 
 
+/** Forward declare so we can keep the crypto ~private~ */
+typedef struct mbedtls_sha512_context sha512_context;
+
+
 typedef struct
 {
     /* Parts data from blind operation */
@@ -39,10 +43,6 @@ typedef struct
 typedef enum {
     RH_T_FULL, RH_T_MSTR, RH_T_HEAD
 } robohash_type;
-
-
-/** Forward declare so we can keep the crypto ~private~ */
-typedef struct mbedtls_sha512_context sha512_context;
 
 
 typedef struct
@@ -75,22 +75,6 @@ unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short
 
 
 /**
- *
- * @param ctx
- * @param path
- * @return
- */
-unsigned int robohash_set_path(robohash_ctx *ctx, const char *path);
-
-
-/**
- * Tell librobohash to not return a bitmap but an array of resources
- * for the user to assemble themselves
- */
-unsigned int robohash_blindness(robohash_ctx *ctx, bool blind);
-
-
-/**
  * Appends a piece of data (possibly string to a buffer that's kept inside
  * the robohash context. This context is then evaluated when calling
  * build.
@@ -102,14 +86,8 @@ unsigned int robohash_append_msg(robohash_ctx *ctx, const char *msg);
 
 
 /**
- *
- * @param ctx
- * @return
- */
-const char *robohash_read_buffer(robohash_ctx *ctx);
-
-
-/**
+ * Build a robo from what was allocated in the buffer and store it in a result
+ * struct that is returned to the user.
  *
  * @param ctx
  * @param buffer
@@ -130,6 +108,67 @@ unsigned int robohash_verify(robohash_ctx *ctx, void *buffer_a, void *buffer_b);
 
 
 /**
+ *
+ * @param ctx
+ * @return
+ */
+unsigned int robohash_free(robohash_ctx *ctx);
+
+
+/*********
+ *
+ * SOME COOL (or not) UTILITY FUNCTIONS BELOW
+ *
+ ************/
+
+
+/**
+ * Read back the buffer that we already allocated in the context. Not
+ * really sure why you would want that. But hey, it's a neat little
+ * utility function
+ *
+ * @param ctx
+ * @return
+ */
+const char *robohash_read_buffer(robohash_ctx *ctx);
+
+
+/**
+ * Small utility function that gets the current path (on POSIX compliant
+ * operating systems - yes, I'm looking at you windows). If this function
+ * doesn't work for you, try to fix it and give me a PR?
+ *
+ * It's supposed to make the finding of resources easier when they're not globally
+ * installed somewhere easy or you want to package them with your application.
+ *
+ * @return current project path
+ */
+char *robohash_get_currdir();
+
+
+/**
+ * Set the resource path. This is absolutely important if you actually care
+ * about finding the robot pictures. FIND THE ROBOTS GOD FUCKING DAMN IT!
+ *
+ * @param ctx
+ * @param path
+ * @return
+ */
+unsigned int robohash_set_path(robohash_ctx *ctx, const char *path);
+
+
+/**
+ * Tell librobohash to not return a bitmap but only the array of resources
+ * for the user to assemble themselves. This could be useful for...idk something.
+ *
+ * @param ctx
+ * @param blind
+ * @return
+ */
+unsigned int robohash_blindness(robohash_ctx *ctx, bool blind);
+
+
+/**
  * Returns a string message (in english) about what type of error you got!
  *
  * @param errno
@@ -137,12 +176,5 @@ unsigned int robohash_verify(robohash_ctx *ctx, void *buffer_a, void *buffer_b);
  */
 const char *robohash_err_v(unsigned int errno);
 
-
-/**
- *
- * @param ctx
- * @return
- */
-unsigned int robohash_free(robohash_ctx *ctx);
 
 #endif // _ROBOHASH_H_

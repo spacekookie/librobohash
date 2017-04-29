@@ -68,6 +68,19 @@ void do_hashing(const char *word)
     printf("Body: %s\n", result->body_res);
     printf("Face: %s\n", result->face_res);
 
+
+#define IMG_PATH "/home/spacekookie/test.png"
+    imgur_img *base, *layer;
+    ret = rh_imgur_alloc(&base, 32, 32);
+//    rh_imgur_storepng(base, "/home/spacekookie/test.png");
+
+    rh_imgur_loadpng(base, IMG_PATH);
+    rh_imgur_storepng(base, IMG_PATH ".foobar");
+
+
+    /** Load the body into an image */
+//    ret = rh_imgur_loadpng(img, result->body_res);
+
     /** Free those strings TODO: Write function for that */
     free(result->mouth_res);
     free(result->eyes_res);
@@ -85,8 +98,12 @@ void do_hashing(const char *word)
 
 int main(void)
 {
+    printf("Length: %i\n", (int) sizeof("RGBA"));
+
+
     for(int i = 0; i < 1; i++) {
         do_hashing(words[i]);
     }
+
     return 0;
 }

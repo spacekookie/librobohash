@@ -9,58 +9,69 @@
 #ifndef ROBOHASH_IMGUR_H
 #define ROBOHASH_IMGUR_H
 
-typedef struct imgur_png {
-    int width, height;
-    void **data;
-} imgur_png;
+#include <stdint.h>
+
+/** A struct that wraps a farbfeld image */
+typedef struct imgur_img {
+    char magic[8];              // "farbfeld" magic number
+    uint32_t width, height;     // 32bit BE resolution
+    uint16_t *data;             // 4*16 BE uint [RGBA] - row-major
+} imgur_img;
 
 
 /**
- * Allocates an empty image struct according to the size provided. The data
- * padding will be in-line with what libpng expects to store it's images.
- *
- * @param w
- * @param h
- * @param img
- * @return
- */
-int rh_imgur_alloc(int w, int h, imgur_png **img);
-
-
-/**
- * Loads a png from disk and stores it's data in the previously allocated
- * struct that needs to be initialised in order for this to work.
- *
- * Will throw an error if the allocated resolution doesn't line up with the
- * image resolution.
+ * Allocates a new, empty farbfeld image that can be used to build a robot
+ * piece by piece. Make sure you can allocate memory on the heap for this
+ * operation.
  *
  * @param img
- * @param path
+ * @param width
+ * @param height
  * @return
  */
-int rh_imgur_load(imgur_png *img, const char *path);
+int rh_imgur_alloc(imgur_img **img, uint32_t width, uint32_t height);
 
 
 /**
  * Merges an image onto a base, overwriting parts of the base where the img
- * doesn't have alpha255 components.
+ * doesn't have alpha components.
  *
  * @param base
- * @param img
+ * @param layer
  * @return
  */
-int rh_imgur_merge(imgur_png *base, imgur_png *img);
+int rh_imgur_merge(imgur_img *base, imgur_img *layer);
 
 
 /**
- * Takes an initialised png struct and stores it to disk into a new png file.
- * This is the last step in librobohash after which the user can then use the
- * image in their application easily.
+ * Open a png image, convert it into farbfeld and load it into
+ * a pre-allocated image struct. Will throw errors if the expected
+ * resolution is wrong.
  *
  * @param img
  * @param path
  * @return
  */
-int rh_imgur_store(imgur_png *img, const char *path);
+int rh_imgur_loadpng(imgur_img *img, const char *path);
+
+
+/**
+ * Will take the farbfeld image data, convert it to a png and save it to
+ * disk to use elsewhere.
+ *
+ * @param img
+ * @param path
+ * @return
+ */
+int rh_imgur_storepng(imgur_img *img, const char *path);
+
+
+/**
+ * Free all memory associated to an image
+ *
+ * @param img
+ * @return
+ */
+int rh_imgur_free(imgur_img *img);
 
 #endif

@@ -13,15 +13,17 @@ set(CMAKE_BUILD_TYPE Debug)
 
 project(robohash)
 
-set(ROBO_SRC 
+set(ROBO_SRC
+
     # Embedded crypto-library
     lib/mbedtls/sha512.c
     # lib/mbedtls/sha256.c
 
     # Core robohash files
+    lib/farbfeld/ff.c
     lib/base64.c
-        lib/rh.c
-    lib/imgur.c)
+    lib/imgur.c
+    lib/rh.c)
 
 # Define the librobohash library
 add_library(librobohash ${ROBO_SRC})

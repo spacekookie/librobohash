@@ -32,8 +32,10 @@
 
 
 /** FUNCTION FORWARD DECLARATIONS **/
-inline void transfer(unsigned char *bfr, int bfr_len, unsigned char *src);
-inline unsigned int hash(unsigned char *str, int mod);
+void transfer(unsigned char *bfr, int bfr_len, unsigned char *src);
+unsigned int hash(unsigned char *str, int mod);
+char *select_part_from(robohash_ctx *ctx, char *part, char *colour, int part_select);
+char *select_bg_from(robohash_ctx *ctx, int set_select, int bg_select);
 
 
 unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short bg, const char *salt)
@@ -129,53 +131,6 @@ unsigned int robohash_blindness(robohash_ctx *ctx, bool blind)
     return RH_ERR_OK;
 }
 
-
-char *select_file_from(robohash_ctx *ctx, char *part, char *colour, int part_select)
-{
-    if(ctx->path == NULL) return NULL;
-
-    DIR *dir;
-    struct dirent *ent;
-
-    /** Create space for the path*/
-    char path[512];
-    memset(path, 0, sizeof(path));
-
-    /** Concat the set, color and part */
-    strcpy(path, ctx->path);
-    strcat(path, "/");
-    strcat(path, RES_S1);
-    strcat(path, colour);
-    strcat(path, "/");
-    strcat(path, part);
-    strcat(path, "/");
-
-    int filec = 0;
-    char selected[64];
-    memset(selected, 0, sizeof(selected));
-
-    if ((dir = opendir(path)) != NULL) {
-        while((ent = readdir (dir)) != NULL) {
-            if(strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
-                continue;
-
-            if(filec == part_select) {
-                strcpy(selected, ent->d_name);
-                break;
-            }
-            filec++;
-        }
-        closedir(dir);
-    } else {
-        printf("FAILED TO OPEN DIRECTORY (%s)...\n", path);
-    }
-
-    size_t path_length = strlen(path) + strlen(selected) + 1;
-    char *sel_path = (char*) calloc(sizeof(char), path_length);
-    strcpy(sel_path, path);
-    strcat(sel_path, selected);
-    return sel_path;
-}
 
 unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
 {
@@ -293,12 +248,17 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
                                "pink", "purple", "red", "white", "yellow" };
 
         /* Select parts from collection */
-        mouth_res = select_file_from(ctx, "000#Mouth", colour_sel[colour], mouth);
-        eyes_res = select_file_from(ctx, "001#Eyes", colour_sel[colour], eye);
-        acc_res = select_file_from(ctx, "002#Accessory", colour_sel[colour], accessory);
-        body_res = select_file_from(ctx, "003#01Body", colour_sel[colour], body);
-        face_res = select_file_from(ctx, "004#02Face", colour_sel[colour], face);
-        bg_res = select_file_from(ctx, )
+        mouth_res = select_part_from(ctx, "000#Mouth", colour_sel[colour], mouth);
+        eyes_res = select_part_from(ctx, "001#Eyes", colour_sel[colour], eye);
+        acc_res = select_part_from(ctx, "002#Accessory", colour_sel[colour], accessory);
+        body_res = select_part_from(ctx, "003#01Body", colour_sel[colour], body);
+        face_res = select_part_from(ctx, "004#02Face", colour_sel[colour], face);
+
+        switch(ctx->bg) {
+            case RH_BG_ONE: bg_res = select_bg_from(ctx, 1, background); break;
+            case RH_BG_TWO: bg_res = select_bg_from(ctx, 2, background); break;
+            default: break;
+        }
 
     } else {
         return RH_ERR_NOT_IMPL;
@@ -311,6 +271,7 @@ unsigned int robohash_build(robohash_ctx *ctx, robohash_result **buffer)
         (*buffer)->acc_res = acc_res;
         (*buffer)->body_res = body_res;
         (*buffer)->face_res = face_res;
+        (*buffer)->bg_res = bg_res;
 
     } else {
         // TODO: Generate png here
@@ -376,7 +337,7 @@ unsigned int robohash_free(robohash_ctx *ctx)
  * @param mod
  * @return
  */
-inline unsigned int hash(unsigned char *str, int mod)
+unsigned int hash(unsigned char *str, int mod)
 {
     int c;
     unsigned int hash = 5381; // My second favourite prime number
@@ -392,8 +353,62 @@ inline unsigned int hash(unsigned char *str, int mod)
  * @param bfr_len
  * @param src
  */
-inline void transfer(unsigned char *bfr, int bfr_len, unsigned char *src) {
+void transfer(unsigned char *bfr, int bfr_len, unsigned char *src) {
     for(int i = 0; i < bfr_len; i++) {
         bfr[i] = src[i];
     }
+}
+
+
+char *select_part_from(robohash_ctx *ctx, char *part, char *colour, int part_select)
+{
+    if(ctx->path == NULL) return NULL;
+
+    DIR *dir;
+    struct dirent *ent;
+
+    /** Create space for the path*/
+    char path[512];
+    memset(path, 0, sizeof(path));
+
+    /** Concat the set, color and part */
+    strcpy(path, ctx->path);
+    strcat(path, "/");
+    strcat(path, RES_S1);
+    strcat(path, colour);
+    strcat(path, "/");
+    strcat(path, part);
+    strcat(path, "/");
+
+    int filec = 0;
+    char selected[64];
+    memset(selected, 0, sizeof(selected));
+
+    if ((dir = opendir(path)) != NULL) {
+        while((ent = readdir (dir)) != NULL) {
+            if(strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+                continue;
+
+            if(filec == part_select) {
+                strcpy(selected, ent->d_name);
+                break;
+            }
+            filec++;
+        }
+        closedir(dir);
+    } else {
+        printf("FAILED TO OPEN DIRECTORY (%s)...\n", path);
+    }
+
+    size_t path_length = strlen(path) + strlen(selected) + 1;
+    char *sel_path = (char*) calloc(sizeof(char), path_length);
+    strcpy(sel_path, path);
+    strcat(sel_path, selected);
+    return sel_path;
+}
+
+
+char *select_bg_from(robohash_ctx *ctx, int set_select, int bg_select)
+{
+    return "";
 }

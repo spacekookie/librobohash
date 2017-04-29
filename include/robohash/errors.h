@@ -26,4 +26,8 @@
 #define RH_ERR_FILE_OPEN_FAILED     (1 << 10)   // Opening a file failed
 #define RH_ERR_FILE_STORE_FAILED    (1 << 11)   // Writing to a file (most likely .png) failed
 
+// Errors about images and image manipulation
+#define RH_ERR_NULL_IMG             (1 << 20)
+#define RH_ERR_RESOLUTION_MISMATCH  (1 << 21)
+
 #endif // _ROBOHASH_ERR_H_

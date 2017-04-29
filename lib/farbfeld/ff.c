@@ -7,6 +7,7 @@
 #include <string.h>
 #include <png.h>
 
+#define __ROBOHASH_FF_2_PNG__
 
 int store_as_png(imgur_img *img, const char *filename)
 {
@@ -79,37 +80,49 @@ int load_from_png(imgur_img *img, const char *filename)
     pngrows = png_get_rows(png_s, png_i);
 
     size_t rows = sizeof(pngrows);
-
-    FILE *foop = NULL;
-    png_struct *png_ss;
-    png_info *png_ii;
-
-    /* Open a file handle for us to use */
-    foop = fopen("/home/spacekookie/boobs.png", "wb");
-
     png_byte depth = png_get_bit_depth(png_s, png_i);
-    printf("Colour depth: %i\n", depth);
 
-    /** Init some libpng shizzle */
-    png_ss = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    png_ii = png_create_info_struct(png_ss);
-    png_init_io(png_ss, foop);
-    png_set_IHDR(png_ss, png_ii, img->width, img->height, 8, PNG_COLOR_TYPE_RGB_ALPHA,
-                 PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
-                 PNG_FILTER_TYPE_BASE);
-    png_write_info(png_ss, png_ii);
+    switch(depth) {
+        case 8:
 
-    for(r = 0; r < height; r++) {
-        png_write_row(png_ss, pngrows[r]);
+            break;
+
+        case 16:
+
+            break;
+
+        default:
+            printf("Invalid colour depth %i!\n", depth);
+            break;
     }
 
-    /** Tell libpng to get on with it already */
-    png_write_end(png_ss, NULL);
-
-    /** Clean everything up and return */
-    fclose(foop);
-    png_free_data(png_ss, png_ii, PNG_FREE_ALL, -1);
-    png_destroy_write_struct(&png_ss, NULL);
+//    FILE *foop = NULL;
+//    png_struct *png_ss;
+//    png_info *png_ii;
+//
+//    /* Open a file handle for us to use */
+//    foop = fopen("/home/spacekookie/boobs.png", "wb");
+//
+//    /** Init some libpng shizzle */
+//    png_ss = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+//    png_ii = png_create_info_struct(png_ss);
+//    png_init_io(png_ss, foop);
+//    png_set_IHDR(png_ss, png_ii, img->width, img->height, 8, PNG_COLOR_TYPE_RGB_ALPHA,
+//                 PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE,
+//                 PNG_FILTER_TYPE_BASE);
+//    png_write_info(png_ss, png_ii);
+//
+//    for(r = 0; r < height; r++) {
+//        png_write_row(png_ss, pngrows[r]);
+//    }
+//
+//    /** Tell libpng to get on with it already */
+//    png_write_end(png_ss, NULL);
+//
+//    /** Clean everything up and return */
+//    fclose(foop);
+//    png_free_data(png_ss, png_ii, PNG_FREE_ALL, -1);
+//    png_destroy_write_struct(&png_ss, NULL);
 
 
     /** Now we can calculate the farbfeld rowlength */

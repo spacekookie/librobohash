@@ -38,7 +38,7 @@ char *select_part_from(robohash_ctx *ctx, char *part, char *colour, int part_sel
 char *select_bg_from(robohash_ctx *ctx, int set_select, int bg_select);
 
 
-unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short bg, const char *salt)
+unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short bg)
 {
 
     /** We have some functional limitations */
@@ -410,5 +410,50 @@ char *select_part_from(robohash_ctx *ctx, char *part, char *colour, int part_sel
 
 char *select_bg_from(robohash_ctx *ctx, int set_select, int bg_select)
 {
-    return "";
+    if(ctx->path == NULL) return NULL;
+
+    DIR *dir;
+    struct dirent *ent;
+
+    /** Create space for the path*/
+    char path[512];
+    memset(path, 0, sizeof(path));
+
+    /** Concat the set, color and part */
+    strcpy(path, ctx->path);
+    strcat(path, "/");
+
+    /* Pick one of the two background directories */
+    switch(ctx->bg) {
+        case RH_BG_ONE: strcat(path, RES_BG1); break;
+        case RH_BG_TWO: strcat(path, RES_BG2); break;
+        default: return "";
+    }
+    strcat(path, "/");
+
+    int filec = 0;
+    char selected[64];
+    memset(selected, 0, sizeof(selected));
+
+    if ((dir = opendir(path)) != NULL) {
+        while((ent = readdir (dir)) != NULL) {
+            if(strcmp(ent->d_name, ".") == 0 || strcmp(ent->d_name, "..") == 0)
+                continue;
+
+            if(filec == bg_select) {
+                strcpy(selected, ent->d_name);
+                break;
+            }
+            filec++;
+        }
+        closedir(dir);
+    } else {
+        printf("FAILED TO OPEN DIRECTORY (%s)...\n", path);
+    }
+
+    size_t path_length = strlen(path) + strlen(selected) + 1;
+    char *sel_path = (char*) calloc(sizeof(char), path_length);
+    strcpy(sel_path, path);
+    strcat(sel_path, selected);
+    return sel_path;
 }

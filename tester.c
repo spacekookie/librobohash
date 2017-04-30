@@ -36,7 +36,7 @@ void do_hashing(const char *word)
     printf("=== RESULT '%s' ===\n", word);
 
     /** Initialise librobohash */
-    ret = robohash_init(&ctx, RH_T_FULL, RH_BG_ONE, NULL);
+    ret = robohash_init(&ctx, RH_T_FULL, RH_BG_ONE);
     printf("Init: %s", robohash_err_v(ret));
     if (ret != 0) exit(ret);
 
@@ -44,7 +44,7 @@ void do_hashing(const char *word)
     robohash_set_path(&ctx, PATH);
 
     /* Override blind mode */
-    robohash_blindness(&ctx, false);
+    robohash_blindness(&ctx, true);
 
     /** Append a message */
     robohash_append_msg(&ctx, word);
@@ -67,19 +67,33 @@ void do_hashing(const char *word)
     printf("Acc: %s\n", result->acc_res);
     printf("Body: %s\n", result->body_res);
     printf("Face: %s\n", result->face_res);
+    printf("Background: %s\n", result->bg_res);
 
+#define RESOLUTION 300
+    imgur_img *bg, *body, *face, *eyes, *mouth, *acc;
+    rh_imgur_alloc(&bg, RESOLUTION, RESOLUTION);
+    rh_imgur_alloc(&body, RESOLUTION, RESOLUTION);
+    rh_imgur_alloc(&face, RESOLUTION, RESOLUTION);
+    rh_imgur_alloc(&eyes, RESOLUTION, RESOLUTION);
+    rh_imgur_alloc(&mouth, RESOLUTION, RESOLUTION);
+    rh_imgur_alloc(&acc, RESOLUTION, RESOLUTION);
 
-#define IMG_PATH "/home/spacekookie/test.png"
-    imgur_img *base, *layer;
-    ret = rh_imgur_alloc(&base, 32, 32);
-//    rh_imgur_storepng(base, "/home/spacekookie/test.png");
+    ret = rh_imgur_loadff(bg, result->bg_res);
+    printf("Loading background: %s", robohash_err_v(ret));
 
-    rh_imgur_loadpng(base, IMG_PATH);
-    rh_imgur_storepng(base, IMG_PATH ".foobar");
+    rh_imgur_loadff(body, result->body_res);
+    rh_imgur_loadff(face, result->face_res);
+    rh_imgur_loadff(eyes, result->eyes_res);
+    rh_imgur_loadff(mouth, result->mouth_res);
+    rh_imgur_loadff(acc, result->acc_res);
 
+    rh_imgur_merge(bg, body);
+    rh_imgur_merge(bg, face);
+    rh_imgur_merge(bg, eyes);
+    rh_imgur_merge(bg, mouth);
+    rh_imgur_merge(bg, acc);
 
-    /** Load the body into an image */
-//    ret = rh_imgur_loadpng(img, result->body_res);
+    rh_imgur_storepng(bg, "/home/spacekookie/segfault.png");
 
     /** Free those strings TODO: Write function for that */
     free(result->mouth_res);
@@ -101,9 +115,9 @@ int main(void)
     printf("Length: %i\n", (int) sizeof("RGBA"));
 
 
-    for(int i = 0; i < 1; i++) {
-        do_hashing(words[i]);
-    }
+//    for(int i = 0; i < 1; i++) {
+    do_hashing("SEGFAULT");
+//    }
 
     return 0;
 }

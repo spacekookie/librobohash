@@ -7,6 +7,7 @@
 /* stdlib imports */
 #include <malloc.h>
 #include <memory.h>
+#include <netinet/in.h>
 
 #define LEN(x) (sizeof (x) / sizeof *(x))
 
@@ -36,7 +37,7 @@ int rh_imgur_alloc(imgur_img **img, uint32_t width, uint32_t height)
     memcpy((*img)->magic, "farbfeld", 8);
 
     /* Well that went well :) */
-    return RH_ERR_SUCCESS;
+    return RH_ERR_HUGESUCCESS;
 }
 
 
@@ -63,19 +64,34 @@ int rh_imgur_merge(imgur_img *base, imgur_img *layer)
         memcpy(&base->data[i], rgba, sizeof(rgba));
     }
 
-    return RH_ERR_SUCCESS;
+    return RH_ERR_HUGESUCCESS;
 }
 
 
-int rh_imgur_loadpng(imgur_img *img, const char *path)
+int rh_imgur_loadff(imgur_img *img, const char *path)
 {
-    if(img == NULL) return RH_ERR_GENERIC;
+    uint32_t i, ret, width, height;
+    uint32_t header[4];
+    FILE *fp;
 
-#ifdef __ROBOHASH_FF_2_PNG__
-    return load_from_png(img, path);
-#else
-    return RH_ERR_NOT_IMPL;
-#endif
+    /** Open our ff file and read the header */
+    fp = fopen(path, "rb");
+    fread(header, sizeof(uint32_t), 4, fp);
+
+    /** Did you say the magic word? */
+    if(memcmp("farbfeld", header, 8) != 0) return RH_ERR_FILE_OPEN_FAILED;
+
+    /** Read the resolution */
+    width = ntohl(header[2]);
+    height = ntohl(header[3]);
+
+    /** Make sure the data will actually fit into memory */
+    if(img->width != width || img->height != height) return RH_ERR_RESOLUTION_MISMATCH;
+
+    /** Continue loading data */
+    fread(img->data, sizeof(uint16_t), width * height * 4, fp);
+
+    return RH_ERR_HUGESUCCESS;
 }
 
 
@@ -83,9 +99,9 @@ int rh_imgur_storepng(imgur_img *img, const char *path)
 {
     if (img == NULL || path == NULL) return RH_ERR_NULL_IMG;
 
-#ifdef __ROBOHASH_FF_2_PNG__
+//#ifdef __ROBOHASH_FF_2_PNG__
     return store_as_png(img, path);
-#else
-    return RH_ERR_NOT_IMPL;
-#endif
+//#else
+//    return RH_ERR_NOT_IMPL;
+//#endif
 }

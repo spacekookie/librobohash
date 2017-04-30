@@ -11,7 +11,7 @@
 
 // Vague errors and return codes
 #define RH_ERR_OK                   0           // Everything is A-OK
-#define RH_ERR_SUCCESS              0           // This is a triumph, I'm making a note here, huge success <3
+#define RH_ERR_HUGESUCCESS          0           // This is a triumph, I'm making a note here, huge success <3
 #define RH_ERR_WARNING              1           // Can be ignored but might bite you in the ass later
 #define RH_ERR_GENERIC              (1 << 2)    // Something generic went boom
 #define RH_ERR_NOT_IMPL             (1 << 3)    // I haven't been bothered enough to implement it yet - woops

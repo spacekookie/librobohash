@@ -44,15 +44,15 @@ int rh_imgur_merge(imgur_img *base, imgur_img *layer);
 
 
 /**
- * Open a png image, convert it into farbfeld and load it into
- * a pre-allocated image struct. Will throw errors if the expected
+ * Open a ff image and load it into a pre-allocated
+ * image struct. Will throw errors if the expected
  * resolution is wrong.
  *
  * @param img
  * @param path
  * @return
  */
-int rh_imgur_loadpng(imgur_img *img, const char *path);
+int rh_imgur_loadff(imgur_img *img, const char *path);
 
 
 /**

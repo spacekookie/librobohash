@@ -67,11 +67,9 @@ typedef struct
  * 
  *   ctx:             An empty context either on stack or heap to
  *                        write information into how to hash.
- *   hash_function:   A short from RH_HASH_* to use in the backend
- *   salt:            Optional, a string to use as salt for all 
- *                        future operations.
+ *
  */
-unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short bg, const char *salt);
+unsigned int robohash_init(robohash_ctx *ctx, robohash_type type, unsigned short bg);
 
 
 /**

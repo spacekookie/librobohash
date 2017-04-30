@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define __ROBOHASH_FF_2_PNG__
+
 extern char *argv0;
 
 #define LEN(x) (sizeof (x) / sizeof *(x))
